@@ -1,0 +1,107 @@
+digraph ChunkingStrategy {
+    node [shape = box; style = filled; fontname = "Arial";];
+    rankdir = TB;
+    
+    // Initial Setup
+    Start [label = "Calculate Target Words\nper Chunk (total/num_chunks)";shape = oval;fillcolor = lightblue;];
+    MergeTiny [label = "Pre-process:\nMerge Tiny Leading Pages\n(< 10% of target)";fillcolor = "#ccccff";];
+    
+    // Main Loop
+    LoopStart [label = "Start Loop: Next Page";shape = oval;fillcolor = lightblue;];
+    CountWords [label = "Count Words in Page";];
+    CheckChapter [label = "Is Chapter Start?";shape = diamond;fillcolor = lightyellow;];
+    CheckSoftLimit [label = "Current Chunk\n> 60% Full?";shape = diamond;fillcolor = lightyellow;];
+    CheckHardLimit [label = "Current + Page\n> 125% Full?";shape = diamond;fillcolor = lightyellow;];
+    
+    Split [label = "CLOSE Chunk\n& START New";fillcolor = "#ff9966";];
+    Merge [label = "APPEND Page\nto Current Chunk";fillcolor = "#99ff66";];
+    
+    UpdateCounters [label = "Add Words to Total";];
+    MorePages [label = "More Pages?";shape = diamond;fillcolor = lightyellow;];
+    
+    // Post-processing
+    CheckFinal [label = "Final Chunk\n< 25% of target?";shape = diamond;fillcolor = lightyellow;];
+    MergeFinal [label = "Merge into\nPrevious Chunk";fillcolor = "#ff9966";];
+    KeepFinal [label = "Keep as\nSeparate Chunk";fillcolor = "#99ff66";];
+    
+    // Safe Output Validation
+    Validate [label = "Check All Chunks:\nTarget × Ratio > SAFE_OUTPUT_WORDS?";shape = diamond;fillcolor = lightcoral;];
+    NeedsSplit [label = "Intelligent Split Required";fillcolor = "#ff9966";];
+    
+    // Intelligent Split Logic
+    SplitType [label = "Split at Boundaries";shape = box;fillcolor = "#ffcc99";];
+    TryParagraph [label = "Try Paragraph\nBoundaries (\\n\\n)";shape = diamond;fillcolor = lightyellow;];
+    CheckOversized [label = "Paragraph\n> max_words?";shape = diamond;fillcolor = lightyellow;];
+    SplitSentence [label = "Split Paragraph\nat Sentences";fillcolor = "#ffcc99";];
+    GroupParagraph [label = "Group Paragraphs\ninto Sub-chunks";fillcolor = "#99ff66";];
+    
+    TrySentence [label = "Try Sentence\nBoundaries (.!?)";shape = diamond;fillcolor = lightyellow;];
+    GroupSentence [label = "Group Sentences\ninto Sub-chunks";fillcolor = "#99ff66";];
+    
+    LastResort [label = "Split at Word\nBoundary (midpoint)";fillcolor = "#ffcc99";];
+    
+    DistributeImages [label = "Distribute Images\nEvenly Across Sub-chunks";fillcolor = "#ccccff";];
+    
+    Ready [label = "All Chunks Ready";fillcolor = "#99ff66";];
+    Process [label = "Process Chunks\nin Parallel";shape = oval;fillcolor = lightblue;];
+    
+    // Flow
+    Start -> MergeTiny;
+    MergeTiny -> LoopStart;
+    
+    LoopStart -> CountWords;
+    CountWords -> CheckChapter;
+    
+    CheckChapter -> CheckSoftLimit [label = "YES";];
+    CheckChapter -> CheckHardLimit [label = "NO";];
+    
+    CheckSoftLimit -> Split [label = "YES";];
+    CheckSoftLimit -> Merge [label = "NO";];
+    
+    CheckHardLimit -> Split [label = "YES";];
+    CheckHardLimit -> Merge [label = "NO";];
+    
+    Split -> MorePages;
+    Merge -> UpdateCounters;
+    UpdateCounters -> MorePages;
+    
+    MorePages -> LoopStart [label = "YES";];
+    MorePages -> CheckFinal [label = "NO";];
+    
+    CheckFinal -> MergeFinal [label = "YES\n(and has prev chunk)";];
+    CheckFinal -> KeepFinal [label = "NO";];
+    
+    MergeFinal -> Validate;
+    KeepFinal -> Validate;
+    
+    // Validation & Splitting
+    Validate -> Ready [label = "All chunks safe";];
+    Validate -> NeedsSplit [label = "Some exceed limit";];
+    
+    NeedsSplit -> SplitType;
+    SplitType -> TryParagraph;
+    
+    TryParagraph -> CheckOversized [label = "Has paragraphs";];
+    TryParagraph -> TrySentence [label = "No paragraphs";];
+    
+    CheckOversized -> SplitSentence [label = "YES\n(para > max_words)";];
+    CheckOversized -> GroupParagraph [label = "NO";];
+    
+    SplitSentence -> GroupParagraph;
+    GroupParagraph -> DistributeImages;
+    
+    TrySentence -> GroupSentence [label = "Has sentences";];
+    TrySentence -> LastResort [label = "No sentences";];
+    
+    GroupSentence -> DistributeImages;
+    LastResort -> DistributeImages;
+    
+    DistributeImages -> MergeTinyPost;
+    
+    // Post-Split Cleanup
+    MergeTinyPost [label = "Post-Split Merge:\nCombine Tiny Chunks\nwith Neighbors";fillcolor = "#99ff66";];
+    
+    Validate -> MergeTinyPost [label = "All chunks safe";];
+    MergeTinyPost -> Ready;
+    Ready -> Process;
+}

@@ -1,0 +1,11 @@
+# Project Input/Output
+Input/
+Output/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db

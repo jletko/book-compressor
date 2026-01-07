@@ -1,0 +1,5 @@
+openai
+pypdf
+ebooklib
+beautifulsoup4
+Pillow
